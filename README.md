@@ -1,5 +1,5 @@
-# onboarding
+# mac-dev-setup
 
-Onboarding tasks for (macOS) client computers.
+Onboarding tasks for fresh macOS computers.
 
-Run `setup.sh` from the designated target OS dir to start the process.
+Run `setup.sh` to start the process.
