@@ -2,8 +2,9 @@
 
 set -euo pipefail
 
-DRY_RUN=1
+source .env
 
+# Text coloring and styling
 red=$(tput setaf 1)
 green=$(tput setaf 2)
 blue=$(tput setaf 4)
@@ -14,7 +15,7 @@ normal=$(tput sgr0)
 run_command() {
   echo "${bold}Command:${normal} $@"
 
-  if [ $DRY_RUN -eq 0 ]; then
+  if [ "$DRY_RUN" == false ]; then
     eval "$@"
   else
     echo -e "[noop] $@"
@@ -22,7 +23,7 @@ run_command() {
 }
 
 print_header() {
-  echo "${bold}${blue}${1}${endcolor}${normal}"
+  echo "${bold}${blue}=== ${1} ===${endcolor}${normal}"
 }
 
 setup_macos() {
@@ -30,46 +31,39 @@ setup_macos() {
   run_command ./improved-macos-defaults.sh
 }
 
-install_dependencies() {
-  homebrew_formulaes=(
-    git
-    git-standup
-    jesseduffield/lazygit/lazygit
-    mas
-    jq
-    tmux
-    zsh
-    zsh-completions
-    gnupg
-  )
-  homebrew_casks=(
-    sequel-ace
-    visual-studio-code
-    google-chrome
-    bitwarden
-    whatsapp
-    docker
-    iterm2
-    spotify
-  )
-  nvm_version="0.39.1"
+install_java_dependencies() {
+  print_header "Installing Java dependencies"
 
-  print_header "Installing Homebrew"
-  run_command "bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+  print_header "Installing SDKMAN!"
+  run_command 'curl -s "https://get.sdkman.io" | bash'
+}
+
+install_node_dependencies() {
+  print_header "Installing Node dependencies"
 
   print_header "Installing NVM"
-  run_command "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v${nvm_version}/install.sh | bash"
-
-  run_command "source ~/.zshrc"
+  run_command "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh | bash"
 
   print_header "Installing latest Node LTS"
   run_command "nvm install --lts"
 
+  print_header "Installing VSCode extensions"
+  for extension in "${VSCODE_EXTENSIONS[@]}"; do
+    run_command "code --install-extension $extension"
+  done
+}
+
+install_dependencies() {
+  print_header "Installing Homebrew"
+  run_command "bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+
+  run_command "source ~/.zshrc"
+
   print_header "Installing Homebrew formulaes"
-  run_command "brew install ${homebrew_formulaes[@]}"
+  run_command "brew install ${HOMEBREW_FORMULAES[@]}"
 
   print_header "Installing Homebrew casks"
-  run_command "brew install --cask ${homebrew_casks[@]}"
+  run_command "brew install --cask ${HOMEBREW_CASKS[@]}"
 }
 
 setup_gpg() {
@@ -110,7 +104,7 @@ setup_ssh() {
   fi
 }
 
-if [ $DRY_RUN -eq 1 ]; then
+if [ "$DRY_RUN" == true ]; then
   echo "${bold}${red}NB: Running in dry mode - no commands will be executed${endcolor}${normal}"
 fi
 
@@ -119,6 +113,20 @@ read -p "Enter email address: " user_email
 
 install_dependencies
 
+read -n1 -p "Are you planning to use Java (y/N)?: " enable_java
+echo
+
+if [ "$enable_java" == "y" ]; then
+  install_java_dependencies
+fi
+
+read -n1 -p "Are you planning to use Node (y/N)?: " enable_node
+echo
+
+if [ "$enable_node" == "y" ]; then
+  install_node_dependencies
+fi
+
 print_header "Appending improved zsh config"
 run_command "cp custom-zsh-config.sh ~/"
 
@@ -126,7 +134,14 @@ if ! grep -q custom-zsh-config.sh ~/.zshrc; then
   run_command "echo \"source ~/custom-zsh-config.sh\" >> ~/.zshrc"
 fi
 
-setup_macos
+print_header "macOS defaults"
+read -n1 -p "Do you want to apply improved defaults to macOS (y/N)?: " adjust_macos_defaults
+echo
+
+if [ "$adjust_macos_defaults" == "y" ]; then
+  setup_macos
+fi
+
 setup_ssh "$user_email"
 setup_gpg "$user_email"
 setup_git "$user_full_name" "$user_email"
