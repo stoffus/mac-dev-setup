@@ -1,9 +1,15 @@
+# "Unlimited" history
+HISTSIZE=10000000
+SAVEHIST=10000000
+
+# Don't share history between sessions
+unsetopt share_history
+
 plugins=(
     git
     docker
 )
 
-alias ssh=ssh --apple-load-keychain
 alias lg=lazygit
 
 init_ssh_agent() {
